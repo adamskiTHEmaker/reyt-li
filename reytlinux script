@@ -1,0 +1,102 @@
+#!/bin/bash
+# Reyt Linux Customization Script with GitHub-hosted Branding
+# Run inside Cubic chroot environment
+
+set -e
+
+# --- Update and upgrade base system ---
+apt-get update -y
+apt-get upgrade -y
+
+# --- Install required dependencies ---
+apt-get install -y \
+    wget \
+    curl \
+    gdebi \
+    gdebi-core \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    python3-pip \
+    build-essential \
+    unzip \
+    git \
+    imagemagick \
+    hicolor-icon-theme \
+    gnome-icon-theme
+
+# --- Install Google Chrome ---
+wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+gdebi -n /tmp/google-chrome.deb
+rm /tmp/google-chrome.deb
+
+# --- Install FreeCAD ---
+add-apt-repository -y ppa:freecad-maintainers/freecad-stable
+apt-get update -y
+apt-get install -y freecad
+
+# --- Install Ultimaker Cura ---
+wget -q -O /tmp/cura.deb https://software.ultimaker.com/cura/5.7.0/Ultimaker_Cura-5.7.0-linux.deb
+gdebi -n /tmp/cura.deb
+rm /tmp/cura.deb
+
+# --- Install Ventoy ---
+VENTOY_VERSION="1.0.97"
+wget -q -O /tmp/ventoy.tar.gz https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz
+tar -xzf /tmp/ventoy.tar.gz -C /tmp
+cd /tmp/ventoy-${VENTOY_VERSION}
+./Ventoy2Disk.sh -h
+# User must run Ventoy2Disk with correct device path manually
+cd ~
+rm -rf /tmp/ventoy*
+
+# --- Install PS4/5 Tools (Cod3r's GitHub) ---
+mkdir -p /opt/ps_tools
+cd /opt/ps_tools
+wget -q https://github.com/TheCod3rYouTube/PS5NorModifier/releases/download/release/PS5NorModifier.zip
+unzip PS5NorModifier.zip
+rm PS5NorModifier.zip
+
+# --- Optional UART CL Tools ---
+git clone https://github.com/TheCod3rYouTube/PS5NorModifier.git /opt/uart_cl
+
+# --- Custom Branding: Download from GitHub ---
+mkdir -p /opt/reyt_branding
+
+# Example: Replace these URLs with your actual repos/files
+BOOT_LOGO_URL="https://raw.githubusercontent.com/YourGitHubUser/BootLogoRepo/main/boot_logo.png"
+TOOLBAR_ICON_URL="https://raw.githubusercontent.com/YourGitHubUser/ToolbarIconRepo/main/toolbar_icon.png"
+DESKTOP_BG_URL="https://raw.githubusercontent.com/YourGitHubUser/DesktopBGRepo/main/desktop_bg.png"
+
+wget -q -O /opt/reyt_branding/boot_logo.png $BOOT_LOGO_URL
+wget -q -O /opt/reyt_branding/toolbar_icon.png $TOOLBAR_ICON_URL
+wget -q -O /opt/reyt_branding/desktop_bg.png $DESKTOP_BG_URL
+
+# --- Apply Branding ---
+
+## Boot Logo (GRUB)
+cp /opt/reyt_branding/boot_logo.png /boot/grub/themes/reyt_logo.png || true
+if [ -d /boot/grub/themes ]; then
+    echo "set theme=/boot/grub/themes/reyt_logo.png" >> /etc/default/grub
+    update-grub
+fi
+
+## Toolbar Icon (Mint Menu)
+ICON_DEST="/usr/share/icons/hicolor/256x256/apps/mint-menu.png"
+cp /opt/reyt_branding/toolbar_icon.png $ICON_DEST || true
+gtk-update-icon-cache /usr/share/icons/hicolor
+
+## Desktop Background
+DESKTOP_DEST="/usr/share/backgrounds/reyt_bg.png"
+cp /opt/reyt_branding/desktop_bg.png $DESKTOP_DEST || true
+gsettings set org.cinnamon.desktop.background picture-uri "file://$DESKTOP_DEST"
+gsettings set org.cinnamon.desktop.background picture-options "scaled"
+
+# --- Clean up ---
+apt-get autoremove -y
+apt-get clean
+
+echo "Reyt Linux setup complete with GitHub-hosted branding!”
+ 
